@@ -126,22 +126,50 @@ class MCPSession:
 
     # _initialize_session method removed - initialization is handled directly in handle_request
     def _extract_timeout_override(self, request_data: Dict[str, Any]) -> Optional[float]:
-        """Extract a per-request timeout override if provided in params._meta.timeoutSeconds."""
+        """Extract a per-request timeout override from params."""
         params = request_data.get("params")
         if not isinstance(params, dict):
             return None
+
+        override: Optional[float] = None
+
+        arguments = params.get("arguments")
+        if isinstance(arguments, dict) and "modelTimeoutOverride" in arguments:
+            candidate = arguments.pop("modelTimeoutOverride")
+            if isinstance(candidate, (int, float)) and candidate > 0:
+                override = float(candidate)
+                logger.info(
+                    "Session %s: Using modelTimeoutOverride %.2f seconds",
+                    self.session_id,
+                    override,
+                )
+            else:
+                logger.warning(
+                    "Session %s: Ignoring invalid modelTimeoutOverride %r",
+                    self.session_id,
+                    candidate,
+                )
+
+        if override is not None:
+            return override
+
         meta = params.get("_meta")
-        if not isinstance(meta, dict):
-            return None
-        override = meta.get("timeoutSeconds")
-        if isinstance(override, (int, float)) and override > 0:
-            logger.info(
-                "Session %s: Using per-request timeout override %.2f seconds",
-                self.session_id,
-                float(override),
-            )
-            return float(override)
-        return None
+        if isinstance(meta, dict):
+            candidate = meta.get("timeoutSeconds")
+            if isinstance(candidate, (int, float)) and candidate > 0:
+                override = float(candidate)
+                logger.info(
+                    "Session %s: Using per-request timeout override %.2f seconds",
+                    self.session_id,
+                    override,
+                )
+            elif candidate is not None:
+                logger.warning(
+                    "Session %s: Ignoring invalid _meta.timeoutSeconds %r",
+                    self.session_id,
+                    candidate,
+                )
+        return override
 
     async def _list_tools(self):
         """Get list of available tools from the server."""
