@@ -119,6 +119,28 @@ Codex CLI (0.53.0+) negotiates the 2025-06-18 MCP protocol and declares the `eli
 
 The proxy returns HTTP `200 OK` with an `Mcp-Session-Id` header when the stdio server acknowledges the handshake. Subsequent JSON-RPC requests must include that header. After initialization, Codex emits a `notifications/initialized` message (no `id`); the proxy forwards it to the stdio server and replies with HTTP `202 Accepted` and an empty body.
 
+#### Per-request timeout override
+You can override the per-request timeout (default 300s) by adding `_meta.timeoutSeconds` inside the JSON-RPC `params`. Example:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "tools/call",
+  "params": {
+    "name": "codex",
+    "arguments": {
+      "prompt": "Run a long task"
+    },
+    "_meta": {
+      "timeoutSeconds": 600
+    }
+  }
+}
+```
+
+If `_meta.timeoutSeconds` is present and greater than zero, the proxy waits that long for the stdio server to respond. The session timeout is automatically bumped to at least twice the request timeout when the proxy starts.
+
 ### Response Format
 
 JSON-RPC 2.0 responses with session ID header:

@@ -91,7 +91,7 @@ class MCPSession:
                 f"Session {self.session_id}: Received unsolicited message: {response}",
             )  # TODO: Break long line
 
-    async def _send_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
+    async def _send_request(self, request: Dict[str, Any], timeout: Optional[float] = None) -> Dict[str, Any]:
         """Send a request to the server and wait for response."""
         if not self.process or not self.process.stdin:
             raise RuntimeError(
@@ -115,7 +115,8 @@ class MCPSession:
         if request_id is not None:
             # Wait for response
             try:
-                response = await asyncio.wait_for(future, timeout=self.request_timeout)
+                effective_timeout = timeout if timeout is not None else self.request_timeout
+                response = await asyncio.wait_for(future, timeout=effective_timeout)
                 return response
             except asyncio.TimeoutError as e:
                 self.pending_responses.pop(request_id, None)
@@ -124,6 +125,24 @@ class MCPSession:
         return {}
 
     # _initialize_session method removed - initialization is handled directly in handle_request
+    def _extract_timeout_override(self, request_data: Dict[str, Any]) -> Optional[float]:
+        """Extract a per-request timeout override if provided in params._meta.timeoutSeconds."""
+        params = request_data.get("params")
+        if not isinstance(params, dict):
+            return None
+        meta = params.get("_meta")
+        if not isinstance(meta, dict):
+            return None
+        override = meta.get("timeoutSeconds")
+        if isinstance(override, (int, float)) and override > 0:
+            logger.info(
+                "Session %s: Using per-request timeout override %.2f seconds",
+                self.session_id,
+                float(override),
+            )
+            return float(override)
+        return None
+
     async def _list_tools(self):
         """Get list of available tools from the server."""
         self.request_id_counter += 1
@@ -159,8 +178,10 @@ class MCPSession:
                     f"Session {self.session_id}: Initialize request: {json.dumps(request_data, indent=2)}",  # TODO: Break long line
                 )
 
+                timeout_override = self._extract_timeout_override(request_data)
+
                 # Forward the initialize request to the underlying server
-                response = await self._send_request(request_data)
+                response = await self._send_request(request_data, timeout_override)
                 logger.info(
                     f"Session {self.session_id}: Initialize response from server: {json.dumps(response, indent=2)}",  # TODO: Break long line
                 )
@@ -177,7 +198,7 @@ class MCPSession:
                         "method": "notifications/initialized",
                         "params": {},
                     }
-                    await self._send_request(initialized_notification)
+                    await self._send_request(initialized_notification, timeout_override)
 
                     # Get available tools
                     await self._list_tools()
@@ -197,11 +218,13 @@ class MCPSession:
         if method != "initialize" and not self.session_initialized:
             raise RuntimeError(f"Session {self.session_id} not initialized")
 
+        timeout_override = self._extract_timeout_override(request_data)
+
         if method and method.startswith("notifications/"):
             logger.info(
                 f"Session {self.session_id}: Forwarding notification {method}",
             )
-            await self._send_request(request_data)
+            await self._send_request(request_data, timeout_override)
             return None
 
         logger.info(
@@ -216,7 +239,7 @@ class MCPSession:
             self.request_id_counter += 1
             request_data["id"] = self.request_id_counter
 
-        response = await self._send_request(request_data)
+        response = await self._send_request(request_data, timeout_override)
         logger.info(
             f"Session {self.session_id}: MCP server response: {json.dumps(response, indent=2)}",  # TODO: Break long line
         )
