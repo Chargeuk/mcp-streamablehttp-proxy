@@ -13,6 +13,10 @@
      ```
      pip install --upgrade git+https://github.com/Chargeuk/mcp-streamablehttp-proxy.git
      ```
+     If you already have version `0.2.0` installed locally, add `--force-reinstall` so pip replaces the cached build:
+     ```
+     pip install --upgrade --force-reinstall git+https://github.com/Chargeuk/mcp-streamablehttp-proxy.git
+     ```
    - Optionally pin the package version in `requirements.txt` if we want reproducibility.
 
 4. **Wrap the Codex MCP server with the proxy**
