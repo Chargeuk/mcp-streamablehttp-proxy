@@ -197,6 +197,17 @@ class MCPSession:
         if method != "initialize" and not self.session_initialized:
             raise RuntimeError(f"Session {self.session_id} not initialized")
 
+        if method and method.startswith("notifications/"):
+            logger.info(
+                f"Session {self.session_id}: Forwarding notification {method}",
+            )
+            await self._send_request(request_data)
+            return {
+                "jsonrpc": "2.0",
+                "id": request_data.get("id"),
+                "result": None,
+            }
+
         logger.info(
             f"Session {self.session_id}: Handling MCP request: {json.dumps(request_data, indent=2)}",  # TODO: Break long line
         )
@@ -464,5 +475,22 @@ def create_app(server_command: List[str], session_timeout: int = 300) -> FastAPI
         """Handle MCP requests with trailing slash."""
         # Origin validation is handled in handle_mcp
         return await handle_mcp(request)
+
+    @app.delete("/mcp")
+    async def delete_mcp(request: Request):
+        """Handle DELETE requests to close a session."""
+        session_id = request.headers.get("Mcp-Session-Id")
+        if session_id:
+            session = session_manager.sessions.pop(session_id, None)
+            if session:
+                await session.close()
+                logger.info(f"Closed session {session_id} via DELETE /mcp")
+                return JSONResponse(status_code=200, content={"status": "closed"})
+            logger.info(
+                f"DELETE /mcp received for unknown session {session_id}; no action taken",
+            )
+        else:
+            logger.info("DELETE /mcp received without session id; no action taken")
+        return JSONResponse(status_code=200, content={"status": "noop"})
 
     return app
