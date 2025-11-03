@@ -22,6 +22,7 @@ class MCPSession:
         self.server_command = server_command
         self.process: Optional[subprocess.Popen] = None
         self.session_initialized = False
+        self.request_timeout = request_timeout
         self.request_id_counter = 0
         self.pending_responses: Dict[int, asyncio.Future] = {}
         self.server_capabilities: Dict[str, Any] = {}
