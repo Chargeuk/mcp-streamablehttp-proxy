@@ -61,6 +61,7 @@ Options:
   --host TEXT         Host to bind to (default: 127.0.0.1)
   --port INTEGER      Port to bind to (default: 3000)
   --timeout INTEGER   Session timeout in seconds (default: 300)
+  --rpc-timeout FLOAT Per-request timeout in seconds (default: 300)
   --log-level TEXT    Log level: debug/info/warning/error (default: info)
   --help             Show this message and exit
 ```

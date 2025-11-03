@@ -54,6 +54,13 @@ Examples:
     )
 
     parser.add_argument(
+        "--rpc-timeout",
+        type=float,
+        default=300.0,
+        help="Per-request timeout in seconds (default: 300)",
+    )
+
+    parser.add_argument(
         "--log-level",
         choices=["debug", "info", "warning", "error"],
         default="info",
@@ -78,6 +85,7 @@ Examples:
             host=args.host,
             port=args.port,
             session_timeout=args.timeout,
+            request_timeout=args.rpc_timeout,
             log_level=args.log_level,
         )
     except KeyboardInterrupt:

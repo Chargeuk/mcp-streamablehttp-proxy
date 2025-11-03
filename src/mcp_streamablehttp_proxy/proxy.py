@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class MCPSession:
     """Individual MCP session with its own subprocess."""
 
-    def __init__(self, session_id: str, server_command: List[str]):
+    def __init__(self, session_id: str, server_command: List[str], request_timeout: float = 30.0):
         self.session_id = session_id
         self.server_command = server_command
         self.process: Optional[subprocess.Popen] = None
@@ -115,7 +115,7 @@ class MCPSession:
         if request_id is not None:
             # Wait for response
             try:
-                response = await asyncio.wait_for(future, timeout=30.0)
+                response = await asyncio.wait_for(future, timeout=self.request_timeout)
                 return response
             except asyncio.TimeoutError as e:
                 self.pending_responses.pop(request_id, None)
@@ -253,10 +253,11 @@ class MCPSession:
 class MCPSessionManager:
     """Manages multiple MCP sessions."""
 
-    def __init__(self, server_command: List[str], session_timeout: int = 300):
+    def __init__(self, server_command: List[str], session_timeout: int = 300, request_timeout: float = 30.0):
         self.server_command = server_command
         self.sessions: Dict[str, MCPSession] = {}
         self.session_timeout = session_timeout  # Default 5 minutes
+        self.request_timeout = request_timeout
         self._cleanup_task: Optional[asyncio.Task] = None
         # Proxy is protocol-agnostic - it forwards whatever the client requests
 
@@ -285,7 +286,11 @@ class MCPSessionManager:
             return session
 
         # Create new session
-        session = MCPSession(session_id, self.server_command)
+        session = MCPSession(
+            session_id,
+            self.server_command,
+            request_timeout=self.request_timeout,
+        )
         await session.start_server()
         self.sessions[session_id] = session
 
@@ -322,7 +327,11 @@ class MCPSessionManager:
 
             # Create new session
             new_session_id = str(uuid4())
-            session = MCPSession(new_session_id, self.server_command)
+            session = MCPSession(
+                new_session_id,
+                self.server_command,
+                request_timeout=self.request_timeout,
+            )
 
             # Start the subprocess
             await session.start_server()
@@ -393,7 +402,7 @@ class MCPSessionManager:
                 logger.error(f"Error in session cleanup: {e}")
 
 
-def create_app(server_command: List[str], session_timeout: int = 300) -> FastAPI:
+def create_app(server_command: List[str], session_timeout: int = 300, request_timeout: float = 30.0) -> FastAPI:
     """Create FastAPI app with MCP proxy endpoints."""
     app = FastAPI()
 
@@ -401,7 +410,7 @@ def create_app(server_command: List[str], session_timeout: int = 300) -> FastAPI
     # This ensures CORS headers are set in only one place as required
 
     # Create session manager
-    session_manager = MCPSessionManager(server_command, session_timeout)
+    session_manager = MCPSessionManager(server_command, session_timeout, request_timeout)
 
     @app.on_event("startup")
     async def startup_event():

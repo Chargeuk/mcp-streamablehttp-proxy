@@ -15,6 +15,7 @@ def run_server(
     host: str = "127.0.0.1",
     port: int = 3000,
     session_timeout: int = 300,
+    request_timeout: float = 300.0,
     log_level: str = "info",
 ):
     """Run the MCP stdio-to-HTTP proxy server.
@@ -25,6 +26,7 @@ def run_server(
         host: Host to bind to (default: 127.0.0.1)
         port: Port to bind to (default: 3000)
         session_timeout: Session timeout in seconds (default: 300)
+        request_timeout: Per-request timeout in seconds (default: 300)
         log_level: Logging level (default: info)
 
     """
@@ -52,8 +54,19 @@ def run_server(
 
     logger.info(f"Starting MCP stdio-to-HTTP proxy for: {' '.join(server_command)}")
 
+    # Ensure session timeout is at least twice the per-request timeout
+    min_session_timeout = int(request_timeout * 2)
+    if session_timeout < min_session_timeout:
+        logger.info(
+            "Session timeout %s is less than twice the request timeout %.2f; raising to %s",
+            session_timeout,
+            request_timeout,
+            min_session_timeout,
+        )
+        session_timeout = min_session_timeout
+
     # Create FastAPI app
-    app = create_app(server_command, session_timeout)
+    app = create_app(server_command, session_timeout, request_timeout)
 
     # Run server without automatic trailing slash redirects
     uvicorn.run(app, host=host, port=port, log_level=log_level)
