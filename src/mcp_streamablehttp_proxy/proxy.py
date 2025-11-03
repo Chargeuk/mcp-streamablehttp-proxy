@@ -172,6 +172,31 @@ class MCPSession:
                 )
         return override
 
+    def _inject_timeout_metadata(self, response: Dict[str, Any]) -> None:
+        """Inject modelTimeoutOverride information into tool schemas for discovery."""
+        if not isinstance(response, dict):
+            return
+        result = response.get("result")
+        if not isinstance(result, dict):
+            return
+        tools = result.get("tools")
+        if not isinstance(tools, list):
+            return
+
+        for tool in tools:
+            if not isinstance(tool, dict):
+                continue
+            input_schema = tool.get("inputSchema")
+            if not isinstance(input_schema, dict):
+                continue
+            properties = input_schema.setdefault("properties", {})
+            if "modelTimeoutOverride" not in properties:
+                properties["modelTimeoutOverride"] = {
+                    "description": "Optional per-request timeout override in seconds.",
+                    "type": "number",
+                    "minimum": 0,
+                }
+
     async def _list_tools(self):
         """Get list of available tools from the server."""
         self.request_id_counter += 1
