@@ -26,6 +26,12 @@ It manages sessions, spawns server subprocesses, and handles the protocol transl
 pip install mcp-streamablehttp-proxy
 ```
 
+#### Install latest GitHub version
+To install directly from the GitHub repository (useful before a PyPI release):
+```bash
+pip install --upgrade git+https://github.com/Chargeuk/mcp-streamablehttp-proxy.git
+```
+
 ### Via pixi
 ```bash
 pixi add --pypi mcp-streamablehttp-proxy
