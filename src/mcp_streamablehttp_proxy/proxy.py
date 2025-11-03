@@ -193,6 +193,19 @@ class MCPSession:
 
         result = response.get("result", {})
         self.available_tools = result.get("tools", [])
+
+        # Inject modelTimeoutOverride metadata so clients discover the optional argument
+        for tool in self.available_tools:
+            input_schema = tool.get("inputSchema") if isinstance(tool, dict) else None
+            if not isinstance(input_schema, dict):
+                continue
+            properties = input_schema.setdefault("properties", {})
+            if "modelTimeoutOverride" not in properties:
+                properties["modelTimeoutOverride"] = {
+                    "description": "Optional per-request timeout override in seconds.",
+                    "type": "number",
+                    "minimum": 0,
+                }
         logger.info(
             f"Session {self.session_id}: Available tools: {[t.get('name') for t in self.available_tools]}",  # TODO: Break long line
         )

@@ -143,6 +143,7 @@ Example using `modelTimeoutOverride`:
 }
 ```
 
+Clients calling `tools/list` will see an optional `modelTimeoutOverride` property in each tool's input schema, signalling that the override is supported.
 If `modelTimeoutOverride` (or `_meta.timeoutSeconds`) is present and greater than zero, the proxy waits that long for the stdio server to respond. The session timeout is automatically bumped to at least twice the request timeout when the proxy starts.
 
 ### Response Format
