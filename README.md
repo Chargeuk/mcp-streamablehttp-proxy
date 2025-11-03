@@ -87,22 +87,30 @@ Options:
 
 ### Request Format
 
-Standard JSON-RPC 2.0 messages:
+### Codex CLI compatibility (2025-06-18 protocol)
+
+Codex CLI (0.53.0+) negotiates the 2025-06-18 MCP protocol and declares the `elicitation` capability. Use the following `initialize` payload to ensure a session is created correctly:
+
 ```json
 {
   "jsonrpc": "2.0",
+  "id": 1,
   "method": "initialize",
   "params": {
-    "protocolVersion": "2024-11-05",
-    "capabilities": {},
+    "protocolVersion": "2025-06-18",
+    "capabilities": {
+      "elicitation": {}
+    },
     "clientInfo": {
-      "name": "example-client",
-      "version": "1.0.0"
+      "name": "codex-cli",
+      "title": "Codex",
+      "version": "0.53.0"
     }
-  },
-  "id": 1
+  }
 }
 ```
+
+The proxy returns HTTP `200 OK` with an `Mcp-Session-Id` header when the stdio server acknowledges the handshake. Subsequent JSON-RPC requests must include that header. After initialization, Codex emits a `notifications/initialized` message (no `id`); the proxy forwards it to the stdio server and replies with HTTP `202 Accepted` and an empty body.
 
 ### Response Format
 
