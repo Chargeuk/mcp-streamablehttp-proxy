@@ -449,7 +449,8 @@ def create_app(server_command: List[str], session_timeout: int = 300) -> FastAPI
 
             # Create response with session ID header
             if response is None:
-                json_response = Response(status_code=200)
+                status_code = 202 if method and method.startswith("notifications/") else 200
+                json_response = Response(status_code=status_code)
             else:
                 json_response = JSONResponse(content=response)
             if returned_session_id:
