@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 logger = logging.getLogger(__name__)
 
@@ -202,11 +202,7 @@ class MCPSession:
                 f"Session {self.session_id}: Forwarding notification {method}",
             )
             await self._send_request(request_data)
-            return {
-                "jsonrpc": "2.0",
-                "id": request_data.get("id"),
-                "result": None,
-            }
+            return None
 
         logger.info(
             f"Session {self.session_id}: Handling MCP request: {json.dumps(request_data, indent=2)}",  # TODO: Break long line
@@ -452,7 +448,10 @@ def create_app(server_command: List[str], session_timeout: int = 300) -> FastAPI
             )
 
             # Create response with session ID header
-            json_response = JSONResponse(content=response)
+            if response is None:
+                json_response = Response(status_code=200)
+            else:
+                json_response = JSONResponse(content=response)
             if returned_session_id:
                 json_response.headers["Mcp-Session-Id"] = returned_session_id
                 logger.info(f"Response includes session ID: {returned_session_id}")
