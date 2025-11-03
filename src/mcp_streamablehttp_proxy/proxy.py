@@ -282,6 +282,8 @@ class MCPSession:
             request_data["id"] = self.request_id_counter
 
         response = await self._send_request(request_data, timeout_override)
+        if method == "tools/list" and isinstance(response, dict):
+            self._inject_timeout_metadata(response)
         logger.info(
             f"Session {self.session_id}: MCP server response: {json.dumps(response, indent=2)}",  # TODO: Break long line
         )
